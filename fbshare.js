@@ -41,7 +41,6 @@ async function readCookieFromFile() {
           const jsonData = JSON.parse(content);
           cookies.push(jsonData);
           cookieSources.push({ file, cookie: jsonData });
-          console.log(chalk.hex('#4ECDC4')(`✅ Loaded cookie from ${file}`));
         } catch (e) {
           console.log(chalk.hex('#FF6B6B')(`❌ Invalid JSON in ${file}: ${e.message}`));
         }
@@ -50,7 +49,6 @@ async function readCookieFromFile() {
         if (trimmed) {
           cookies.push(trimmed);
           cookieSources.push({ file, cookie: trimmed });
-          console.log(chalk.hex('#4ECDC4')(`✅ Loaded cookie from ${file}`));
         }
       }
     }
@@ -59,7 +57,7 @@ async function readCookieFromFile() {
       throw new Error('No valid cookie files found');
     }
     
-    console.log(chalk.hex('#FFE66D')(`📊 Total cookie files loaded: ${cookies.length}`));
+    console.log(chalk.hex('#FFE66D')(`📊 Total cookies loaded: ${cookies.length}`));
     return { cookies, cookieSources };
     
   } catch (error) {
@@ -116,7 +114,7 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
     
     let buffer = '';
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       response.data.on('data', (chunk) => {
         buffer += chunk;
         
@@ -135,7 +133,7 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
           } 
           else if (sseData.status === 'completed') {
             console.log(chalk.hex('#2ECC71')(`\n[${file}] ✅ COMPLETE: ${sseData.shareCount} shares`));
-            resolve({ success: true, file, shareCount: sseData.shareCount });
+            resolve({ success: true, file });
           } 
           else if (sseData.status === 'error') {
             console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ERROR: ${sseData.error}`));
@@ -153,63 +151,53 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
 
       response.data.on('error', (err) => {
         console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ Stream Error: ${err.message}`));
-        reject(err);
+        resolve({ success: false, file, error: err.message });
       });
     });
 
   } catch (err) {
-    let errorMessage = err.message;
+    let errorMessage = '';
     let statusCode = null;
-    let responseBody = '';
 
     if (err.response) {
       statusCode = err.response.status;
       
       if (statusCode === 409) {
-        return { 
-          success: false, 
-          file, 
-          error: 'This URL is currently being shared. Please wait or use a different URL.',
-          statusCode,
-          skipDelete: true 
-        };
+        errorMessage = 'This URL is currently being shared. Please wait or use a different URL.';
+        console.log(chalk.hex('#FFE66D')(`\n[${file}] ⚠️ ${errorMessage}`));
+        return { success: false, file, error: errorMessage, statusCode, skipDelete: true };
       }
       
       if (err.response.data) {
-        if (err.response.data instanceof Readable) {
-          const chunks = [];
-          for await (const chunk of err.response.data) {
-            chunks.push(chunk);
-          }
-          responseBody = Buffer.concat(chunks).toString('utf8');
-        } else if (typeof err.response.data === 'string') {
-          responseBody = err.response.data;
-        } else {
+        if (typeof err.response.data === 'string') {
           try {
-            responseBody = JSON.stringify(err.response.data, null, 2);
+            const sseData = parseSSEMessage(err.response.data);
+            if (sseData && sseData.error) {
+              errorMessage = sseData.error;
+            } else {
+              const jsonData = JSON.parse(err.response.data);
+              errorMessage = jsonData.error || jsonData.message || err.response.data;
+            }
           } catch {
-            responseBody = String(err.response.data);
+            errorMessage = err.response.data;
           }
-        }
-        
-        try {
-          const jsonResponse = JSON.parse(responseBody);
-          errorMessage = jsonResponse.error || jsonResponse.message || jsonResponse.error_details || responseBody;
-        } catch {
-          errorMessage = responseBody;
+        } else if (err.response.data.error) {
+          errorMessage = err.response.data.error;
         }
       }
+    } else {
+      errorMessage = err.message;
     }
 
-    console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ERROR ${statusCode ? `(${statusCode})` : ''}`));
-    console.log(chalk.hex('#FFE66D')('Response:', errorMessage));
+    if (errorMessage) {
+      console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ERROR: ${errorMessage}`));
+    }
 
     return { 
       success: false, 
       file, 
       error: errorMessage,
       statusCode,
-      responseBody,
       skipDelete: statusCode === 409
     };
   }
@@ -253,8 +241,6 @@ async function main() {
         await deleteDeadCookie(source.file);
       }
       console.log(chalk.hex('#FF6B6B')("Ctrl + C to Exit!"));
-    } else if (result.statusCode === 409) {
-      console.log(chalk.hex('#FFE66D')(`\n⚠️  ${result.error}`));
     }
   }
 
@@ -266,7 +252,7 @@ async function main() {
   console.log(chalk.hex('#2ECC71')(`✅ Successful: ${successful}`));
   console.log(chalk.hex('#FF6B6B')(`❌ Failed: ${failed}`));
   if (skipped > 0) {
-    console.log(chalk.hex('#FFE66D')(`⏳ In Progress/Skipped: ${skipped}`));
+    console.log(chalk.hex('#FFE66D')(`⏳ In Progress: ${skipped}`));
   }
   
   rl.close();
