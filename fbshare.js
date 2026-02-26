@@ -160,7 +160,7 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
   } catch (err) {
     let errorMessage = err.message;
     let statusCode = null;
-    let responseData = null;
+    let responseBody = '';
 
     if (err.response) {
       statusCode = err.response.status;
@@ -176,27 +176,40 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
       }
       
       if (err.response.data) {
-        if (typeof err.response.data === 'string') {
-          try {
-            const jsonResponse = JSON.parse(err.response.data);
-            responseData = jsonResponse;
-            errorMessage = jsonResponse.error || jsonResponse.message || errorMessage;
-          } catch {
-            responseData = err.response.data;
+        if (err.response.data instanceof Readable) {
+          const chunks = [];
+          for await (const chunk of err.response.data) {
+            chunks.push(chunk);
           }
+          responseBody = Buffer.concat(chunks).toString('utf8');
+        } else if (typeof err.response.data === 'string') {
+          responseBody = err.response.data;
         } else {
-          responseData = err.response.data;
-          errorMessage = err.response.data.error || err.response.data.message || errorMessage;
+          try {
+            responseBody = JSON.stringify(err.response.data, null, 2);
+          } catch {
+            responseBody = String(err.response.data);
+          }
+        }
+        
+        try {
+          const jsonResponse = JSON.parse(responseBody);
+          errorMessage = jsonResponse.error || jsonResponse.message || jsonResponse.error_details || responseBody;
+        } catch {
+          errorMessage = responseBody;
         }
       }
     }
+
+    console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ERROR ${statusCode ? `(${statusCode})` : ''}`));
+    console.log(chalk.hex('#FFE66D')('Response:', errorMessage));
 
     return { 
       success: false, 
       file, 
       error: errorMessage,
       statusCode,
-      responseData,
+      responseBody,
       skipDelete: statusCode === 409
     };
   }
@@ -235,9 +248,6 @@ async function main() {
     results.push(result);
     
     if (!result.success && !result.skipDelete) {
-      console.log(chalk.hex('#FF6B6B')(`\n❌ Error for ${source.file}:`));
-      console.log(chalk.hex('#FFE66D')(result.error));
-      
       const answer = await ask(chalk.hex('#FFE66D')(`\n❓ ${source.file} failed. Delete it? (y/n): `));
       if (answer.toLowerCase() === 'y') {
         await deleteDeadCookie(source.file);
@@ -250,16 +260,15 @@ async function main() {
 
   console.log(chalk.hex('#4ECDC4')('\n📊 FINAL RESULTS:'));
   const successful = results.filter(r => r.success).length;
-  const failed = results.filter(r => !r.success).length;
+  const failed = results.filter(r => !r.success && !r.skipDelete).length;
   const skipped = results.filter(r => r.skipDelete).length;
   
   console.log(chalk.hex('#2ECC71')(`✅ Successful: ${successful}`));
-  console.log(chalk.hex('#FF6B6B')(`❌ Failed: ${failed - skipped}`));
+  console.log(chalk.hex('#FF6B6B')(`❌ Failed: ${failed}`));
   if (skipped > 0) {
     console.log(chalk.hex('#FFE66D')(`⏳ In Progress/Skipped: ${skipped}`));
   }
   
-  console.log(chalk.hex('#FF6B6B')(`Ctrl + C To Exit!`))
   rl.close();
 }
 
