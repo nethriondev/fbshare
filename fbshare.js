@@ -156,6 +156,8 @@ async function main() {
   console.log(chalk.hex('#4ECDC4')('│') + chalk.bold.hex('#FFE66D')('          FB SHARE BOOSTER       ') + chalk.hex('#4ECDC4')('│'));
   console.log(chalk.hex('#FF6B6B')('└─────────────────────────────────┘\n'));
   
+  console.log(chalk.hex('#FFE66D')('📱 TROUBLESHOOTING: If shares don\'t work, try using Facebook Lite app and tap 3 dots of the post then copy the link to avoid any issues\n'));
+  
   const url = await askWithValidation(chalk.hex('#FFE66D')('📎 POST URL: '), 'Post URL');
   const cookieData = await readCookieFromFile();
   if (!cookieData) {
