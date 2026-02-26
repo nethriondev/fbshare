@@ -80,20 +80,6 @@ async function deleteDeadCookie(file) {
   }
 }
 
-function parseSSEMessage(data) {
-  try {
-    const lines = data.split('\n');
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        return JSON.parse(line.slice(6));
-      }
-    }
-  } catch (e) {
-    return null;
-  }
-  return null;
-}
-
 async function shareWithCookie(url, cookie, amount, interval, threads, file) {
   try {
     const response = await axios.post('https://oreo.gleeze.com/api/fbshare', {
@@ -103,102 +89,36 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
       intervalSeconds: parseInt(interval),
       threads: parseInt(threads),
       stream: true
-    }, {
-      responseType: 'stream',
-      headers: {
-        'Accept': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      }
     });
 
-    response.data.setEncoding('utf8');
+    console.log(chalk.hex('#4ECDC4')(`[${file}] ✅ Success`));
+    return { success: true, file };
     
-    let buffer = '';
-
-    return new Promise((resolve) => {
-      response.data.on('data', (chunk) => {
-        buffer += chunk;
-        
-        const messages = buffer.split('\n\n');
-        buffer = messages.pop();
-        
-        for (const message of messages) {
-          const sseData = parseSSEMessage(message);
-          if (!sseData) continue;
-          
-          if (sseData.status === 'started') {
-            console.log(chalk.hex('#4ECDC4')(`[${file}] 🚀 ${sseData.message}`));
-          } 
-          else if (sseData.status === 'progress') {
-            process.stdout.write(`\r[${file}] ${chalk.hex('#4ECDC4')(`📊 ${sseData.message}`)}`);
-          } 
-          else if (sseData.status === 'completed') {
-            console.log(chalk.hex('#2ECC71')(`\n[${file}] ✅ COMPLETE: ${sseData.shareCount} shares`));
-            resolve({ success: true, file });
-          } 
-          else if (sseData.status === 'error') {
-            console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ERROR: ${sseData.error}`));
-            resolve({ success: false, file, error: sseData.error, isValidationError: false });
-          }
-          else if (sseData.status === 'partial_error') {
-            console.log(chalk.hex('#FF6B6B')(`\n[${file}] ⚠️ PARTIAL ERROR: ${sseData.error}`));
-          }
-        }
-      });
-
-      response.data.on('end', () => {
-        resolve({ success: true, file });
-      });
-
-      response.data.on('error', (err) => {
-        console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ Stream Error: ${err.message}`));
-        resolve({ success: false, file, error: err.message, isValidationError: false });
-      });
-    });
-
   } catch (err) {
-    let errorMessage = '';
-    let statusCode = null;
-    let isValidationError = false;
-
-    if (err.response) {
-      statusCode = err.response.status;
-      
-      if (statusCode === 409) {
-        errorMessage = 'This URL is currently being shared. Please wait or use a different URL.';
-        console.log(chalk.hex('#FFE66D')(`\n[${file}] ⚠️ ${errorMessage}`));
-        return { success: false, file, error: errorMessage, statusCode, skipDelete: true };
-      }
-      
-      if (statusCode === 400) {
-        isValidationError = true;
-      }
-      
-      if (err.response.data) {
-        if (typeof err.response.data === 'string') {
-          try {
-            const jsonData = JSON.parse(err.response.data);
-            errorMessage = jsonData.error || jsonData.message || err.response.data;
-            console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ${errorMessage}`));
-          } catch {
-            errorMessage = err.response.data;
-            console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ${errorMessage}`));
-          }
+    let errorMessage = err.message;
+    let statusCode = err.response?.status;
+    
+    if (err.response?.data) {
+      if (typeof err.response.data === 'string') {
+        try {
+          const jsonData = JSON.parse(err.response.data);
+          errorMessage = jsonData.error || jsonData.message || err.response.data;
+        } catch {
+          errorMessage = err.response.data;
         }
+      } else if (err.response.data.error) {
+        errorMessage = err.response.data.error;
       }
-    } else {
-      errorMessage = err.message;
-      console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ${errorMessage}`));
     }
-
+    
+    console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ${errorMessage}`));
+    
     return { 
       success: false, 
       file, 
       error: errorMessage,
       statusCode,
-      isValidationError,
-      skipDelete: statusCode === 409 || isValidationError
+      skipDelete: statusCode === 409 || statusCode === 400
     };
   }
 }
@@ -236,7 +156,7 @@ async function main() {
     results.push(result);
     
     if (!result.success && !result.skipDelete) {
-      const answer = await ask(chalk.hex('#FFE66D')(`\n❓ ${source.file} failed (cookie issue). Delete it? (y/n): `));
+      const answer = await ask(chalk.hex('#FFE66D')(`\n❓ ${source.file} failed. Delete it? (y/n): `));
       if (answer.toLowerCase() === 'y') {
         await deleteDeadCookie(source.file);
       }
@@ -244,15 +164,14 @@ async function main() {
   }
 
   console.log(chalk.hex('#4ECDC4')('\n📊 FINAL RESULTS:'));
+  
   const successful = results.filter(r => r.success).length;
   const failed = results.filter(r => !r.success && !r.skipDelete).length;
   const skipped = results.filter(r => r.skipDelete).length;
   
   console.log(chalk.hex('#2ECC71')(`✅ Successful: ${successful}`));
-  console.log(chalk.hex('#FF6B6B')(`❌ Failed (Cookie Issue): ${failed}`));
-  if (skipped > 0) {
-    console.log(chalk.hex('#FFE66D')(`⏳ Skipped (Validation/In Progress): ${skipped}`));
-  }
+  console.log(chalk.hex('#FF6B6B')(`❌ Failed: ${failed}`));
+  console.log(chalk.hex('#FFE66D')(`⏳ Skipped: ${skipped}`));
   
   rl.close();
 }
