@@ -43,7 +43,7 @@ async function readCookieFromFile() {
           cookieSources.push({ file, cookie: jsonData });
           console.log(chalk.hex('#4ECDC4')(`✅ Loaded cookie from ${file}`));
         } catch (e) {
-          console.log(chalk.hex('#FF6B6B')(`❌ Invalid JSON in ${file}`));
+          console.log(chalk.hex('#FF6B6B')(`❌ Invalid JSON in ${file}: ${e.message}`));
         }
       } else {
         const trimmed = content.trim();
@@ -125,9 +125,10 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
                   resolve({ success: true, file });
                 } else if (data.status === 'error') {
                   console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ERROR: ${data.error}`));
-                  resolve({ success: false, file, error: data.error });
+                  resolve({ success: false, file, error: data.error, statusCode: 400 });
                 }
               } catch (e) {
+                console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ Parse Error: ${e.message}`));
               }
             }
           }
@@ -145,8 +146,45 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
     });
 
   } catch (err) {
-    console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ FAILED: ${err.message}`));
-    return { success: false, file, error: err.message };
+    console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ FAILED`));
+    let statusCode = null;
+    let errorDetails = err.message;
+    
+    if (err.response) {
+      statusCode = err.response.status;
+      
+      if (statusCode === 409) {
+        console.log(chalk.hex('#FFE66D')(`⚠️  [${file}] Share already in progress on this URL. Try another URL or wait for it to finish.`));
+        return { success: false, file, error: 'Share in progress', statusCode, skipDelete: true };
+      }
+      
+      console.log(chalk.hex('#FFE66D')('Status:', err.response.status));
+      console.log(chalk.hex('#FFE66D')('Status Text:', err.response.statusText));
+      
+      if (err.response.data) {
+        if (typeof err.response.data === 'string') {
+          try {
+            const jsonData = JSON.parse(err.response.data);
+            errorDetails = JSON.stringify(jsonData, null, 2);
+            console.log(chalk.hex('#FF6B6B')('Error Details:', errorDetails));
+          } catch {
+            errorDetails = err.response.data;
+            console.log(chalk.hex('#FF6B6B')('Error Details:', err.response.data));
+          }
+        } else {
+          errorDetails = JSON.stringify(err.response.data, null, 2);
+          console.log(chalk.hex('#FF6B6B')('Error Details:', errorDetails));
+        }
+      }
+    } else if (err.request) {
+      errorDetails = 'No response received from server';
+      console.log(chalk.hex('#FF6B6B')(errorDetails));
+      console.log(chalk.hex('#FFE66D')('Request details:', err.request._currentUrl || 'Unknown'));
+    } else {
+      console.log(chalk.hex('#FF6B6B')('Error:', err.message));
+    }
+    
+    return { success: false, file, error: errorDetails, statusCode, skipDelete: statusCode === 409 };
   }
 }
 
@@ -182,7 +220,10 @@ async function main() {
     const result = await shareWithCookie(url, source.cookie, amount, interval, threads, source.file);
     results.push(result);
     
-    if (!result.success) {
+    if (!result.success && !result.skipDelete) {
+      console.log(chalk.hex('#FF6B6B')(`\n❌ Error details for ${source.file}:`));
+      console.log(chalk.hex('#FFE66D')(result.error || 'Unknown error'));
+      
       const answer = await ask(chalk.hex('#FFE66D')(`\n❓ ${source.file} failed. Delete it? (y/n): `));
       if (answer.toLowerCase() === 'y') {
         await deleteDeadCookie(source.file);
@@ -196,6 +237,15 @@ async function main() {
   const failed = results.filter(r => !r.success).length;
   console.log(chalk.hex('#2ECC71')(`✅ Successful: ${successful}`));
   console.log(chalk.hex('#FF6B6B')(`❌ Failed: ${failed}`));
+  
+  if (failed > 0) {
+    console.log(chalk.hex('#FFE66D')('\n❌ Failed files:'));
+    results.filter(r => !r.success).forEach(r => {
+      const statusInfo = r.statusCode ? ` (Status: ${r.statusCode})` : '';
+      const skipInfo = r.skipDelete ? ' [SKIP DELETE]' : '';
+      console.log(chalk.hex('#FF6B6B')(`   - ${r.file}${statusInfo}${skipInfo}: ${r.error || 'Unknown error'}`));
+    });
+  }
   
   rl.close();
 }
