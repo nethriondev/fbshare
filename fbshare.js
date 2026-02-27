@@ -80,20 +80,6 @@ async function deleteDeadCookie(file) {
   }
 }
 
-function parseSSEMessage(data) {
-  try {
-    const lines = data.split('\n');
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        return JSON.parse(line.slice(6));
-      }
-    }
-  } catch (e) {
-    return null;
-  }
-  return null;
-}
-
 async function shareWithCookie(url, cookie, amount, interval, threads, file) {
   try {
     const response = await axios.post('https://oreo.gleeze.com/api/fbshare', {
@@ -104,12 +90,7 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
       threads: parseInt(threads),
       stream: true
     }, {
-      responseType: 'stream',
-      headers: {
-        'Accept': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      }
+      responseType: 'stream'
     });
 
     response.data.setEncoding('utf8');
@@ -119,27 +100,28 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
     return new Promise((resolve) => {
       response.data.on('data', (chunk) => {
         buffer += chunk;
-        
         const messages = buffer.split('\n\n');
-        buffer = messages.pop();
+        buffer = messages.pop() || '';
         
         for (const message of messages) {
-          const sseData = parseSSEMessage(message);
-          if (!sseData) continue;
-          
-          if (sseData.status === 'started') {
-            console.log(chalk.hex('#4ECDC4')(`[${file}] 🚀 ${sseData.message}`));
-          } 
-          else if (sseData.status === 'progress') {
-            process.stdout.write(`\r[${file}] ${chalk.hex('#4ECDC4')(`📊 ${sseData.message}`)}`);
-          } 
-          else if (sseData.status === 'completed') {
-            console.log(chalk.hex('#2ECC71')(`\n[${file}] ✅ COMPLETE: ${sseData.shareCount} shares`));
-            resolve({ success: true, file });
-          } 
-          else if (sseData.status === 'error') {
-            console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ERROR: ${sseData.error}`));
-            resolve({ success: false, file, error: sseData.error });
+          const lines = message.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.status === 'started') {
+                  console.log(chalk.hex('#4ECDC4')(`[${file}] 🚀 ${data.message}`));
+                } else if (data.status === 'progress') {
+                  process.stdout.write(`\r[${file}] ${chalk.hex('#4ECDC4')(`📊 ${data.message}`)}`);
+                } else if (data.status === 'completed') {
+                  console.log(chalk.hex('#2ECC71')(`\n[${file}] ✅ ${data.message}`));
+                  resolve({ success: true, file });
+                } else if (data.status === 'error') {
+                  console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ${data.error}`));
+                  resolve({ success: false, file, error: data.error, statusCode: 400 });
+                }
+              } catch (e) {}
+            }
           }
         }
       });
@@ -149,27 +131,14 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
       });
 
       response.data.on('error', (err) => {
-        console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ Stream Error: ${err.message}`));
+        console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ${err.message}`));
         resolve({ success: false, file, error: err.message });
       });
     });
 
   } catch (err) {
-    let errorMessage = err.message;
-    let statusCode = err.response?.status;
-    
-    if (err.response?.data) {
-      if (typeof err.response.data === 'string') {
-        try {
-          const jsonData = JSON.parse(err.response.data);
-          errorMessage = jsonData.error || jsonData.message || err.response.data;
-        } catch {
-          errorMessage = err.response.data;
-        }
-      } else if (err.response.data.error) {
-        errorMessage = err.response.data.error;
-      }
-    }
+    const statusCode = err.response?.status;
+    const errorMessage = err.response?.data?.error || err.message;
     
     console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ${errorMessage}`));
     
@@ -177,8 +146,7 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
       success: false, 
       file, 
       error: errorMessage,
-      statusCode,
-      skipDelete: statusCode === 409 || statusCode === 400
+      statusCode
     };
   }
 }
@@ -215,8 +183,8 @@ async function main() {
     const result = await shareWithCookie(url, source.cookie, amount, interval, threads, source.file);
     results.push(result);
     
-    if (!result.success && !result.skipDelete) {
-      const answer = await ask(chalk.hex('#FFE66D')(`\n❓ ${source.file} failed. Delete it? (y/n): `));
+    if (!result.success && result.statusCode === 401) {
+      const answer = await ask(chalk.hex('#FFE66D')(`\n❓ ${source.file} expired. Delete it? (y/n): `));
       if (answer.toLowerCase() === 'y') {
         await deleteDeadCookie(source.file);
       }
@@ -225,13 +193,17 @@ async function main() {
 
   console.log(chalk.hex('#4ECDC4')('\n📊 FINAL RESULTS:'));
   
-  const successful = results.filter(r => r.success).length;
-  const failed = results.filter(r => !r.success && !r.skipDelete).length;
-  const skipped = results.filter(r => r.skipDelete).length;
+  const errors = results.filter(r => !r.success);
+  if (errors.length > 0) {
+    console.log(chalk.hex('#FFE66D')('\n📋 Errors:'));
+    errors.forEach(r => {
+      const statusInfo = r.statusCode ? `(Status ${r.statusCode})` : '';
+      console.log(chalk.hex('#FF6B6B')(`   - ${r.file} ${statusInfo}: ${r.error}`));
+    });
+  }
   
+  const successful = results.filter(r => r.success).length;
   console.log(chalk.hex('#2ECC71')(`✅ Successful: ${successful}`));
-  console.log(chalk.hex('#FF6B6B')(`❌ Failed: ${failed}`));
-  console.log(chalk.hex('#FFE66D')(`⏳ Skipped: ${skipped}`));
   
   rl.close();
 }
