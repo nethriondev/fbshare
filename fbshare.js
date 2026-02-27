@@ -80,6 +80,20 @@ async function deleteDeadCookie(file) {
   }
 }
 
+function parseSSEMessage(data) {
+  try {
+    const lines = data.split('\n');
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        return JSON.parse(line.slice(6));
+      }
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+}
+
 async function shareWithCookie(url, cookie, amount, interval, threads, file) {
   try {
     const response = await axios.post('https://oreo.gleeze.com/api/fbshare', {
@@ -89,11 +103,57 @@ async function shareWithCookie(url, cookie, amount, interval, threads, file) {
       intervalSeconds: parseInt(interval),
       threads: parseInt(threads),
       stream: true
+    }, {
+      responseType: 'stream',
+      headers: {
+        'Accept': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+      }
     });
 
-    console.log(chalk.hex('#4ECDC4')(`[${file}] ✅ Success`));
-    return { success: true, file };
+    response.data.setEncoding('utf8');
     
+    let buffer = '';
+
+    return new Promise((resolve) => {
+      response.data.on('data', (chunk) => {
+        buffer += chunk;
+        
+        const messages = buffer.split('\n\n');
+        buffer = messages.pop();
+        
+        for (const message of messages) {
+          const sseData = parseSSEMessage(message);
+          if (!sseData) continue;
+          
+          if (sseData.status === 'started') {
+            console.log(chalk.hex('#4ECDC4')(`[${file}] 🚀 ${sseData.message}`));
+          } 
+          else if (sseData.status === 'progress') {
+            process.stdout.write(`\r[${file}] ${chalk.hex('#4ECDC4')(`📊 ${sseData.message}`)}`);
+          } 
+          else if (sseData.status === 'completed') {
+            console.log(chalk.hex('#2ECC71')(`\n[${file}] ✅ COMPLETE: ${sseData.shareCount} shares`));
+            resolve({ success: true, file });
+          } 
+          else if (sseData.status === 'error') {
+            console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ ERROR: ${sseData.error}`));
+            resolve({ success: false, file, error: sseData.error });
+          }
+        }
+      });
+
+      response.data.on('end', () => {
+        resolve({ success: true, file });
+      });
+
+      response.data.on('error', (err) => {
+        console.log(chalk.hex('#FF6B6B')(`\n[${file}] ❌ Stream Error: ${err.message}`));
+        resolve({ success: false, file, error: err.message });
+      });
+    });
+
   } catch (err) {
     let errorMessage = err.message;
     let statusCode = err.response?.status;
