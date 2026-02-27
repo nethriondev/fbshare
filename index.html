@@ -48,76 +48,100 @@
             justify-content: space-between;
             margin-bottom: 0.5rem;
         }
+        html, body {
+            overflow: auto;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            min-height: 100%;
+            display: flex;
+            align-items: flex-start; 
+            padding: 1rem;
+        }
+        .main-container {
+            max-height: none;
+            overflow: visible;
+            margin: auto; 
+            width: 100%;
+        }
+        .content-wrapper {
+            max-height: none;
+            overflow: visible;
+        }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] flex items-center justify-center p-3 sm:p-4">
-    <div class="w-full max-w-[560px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-6 md:p-8 shadow-2xl">
-        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">FB SHARE</h1>
-        <div class="bg-black/20 border border-white/5 rounded-2xl p-4 sm:p-5 mb-4 sm:mb-6">
-            <div class="flex items-center gap-2 text-amber-400 font-semibold text-sm sm:text-base mb-3"><i class="fas fa-tools"></i> <span>TROUBLESHOOTING</span></div>
-            <div class="grid grid-cols-2 gap-2 sm:gap-3">
-                <div class="flex items-center gap-2 text-slate-300 text-xs sm:text-sm"><i class="fas fa-arrow-right text-amber-400 text-xs"></i> <span>use facebook lite</span></div>
-                <div class="flex items-center gap-2 text-slate-300 text-xs sm:text-sm"><i class="fas fa-arrow-right text-amber-400 text-xs"></i> <span>tap 3 dots copy link</span></div>
-                <div class="flex items-center gap-2 text-slate-300 text-xs sm:text-sm"><i class="fas fa-arrow-right text-amber-400 text-xs"></i> <span>fresh cookie only</span></div>
-                <div class="flex items-center gap-2 text-slate-300 text-xs sm:text-sm"><i class="fas fa-arrow-right text-amber-400 text-xs"></i> <span>public posts only</span></div>
-                <div class="flex items-center gap-2 text-slate-300 text-xs sm:text-sm"><i class="fas fa-arrow-right text-amber-400 text-xs"></i> <span>test with 100 first</span></div>
-                <div class="flex items-center gap-2 text-slate-300 text-xs sm:text-sm"><i class="fas fa-arrow-right text-amber-400 text-xs"></i> <span>avoid private posts</span></div>
+<body class="min-h-screen bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] flex items-start justify-center p-3 sm:p-4">
+    <div class="w-full max-w-[560px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-6 md:p-8 shadow-2xl main-container">
+        <div class="content-wrapper">
+            <h1 class="text-3xl sm:text-4xl font-bold text-center mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">FB SHARE</h1>
+            <div class="bg-black/20 border border-white/5 rounded-2xl p-4 sm:p-5 mb-4 sm:mb-6">
+                <div class="flex items-center gap-2 text-amber-400 font-semibold text-sm sm:text-base mb-3"><i class="fas fa-tools"></i> <span>TROUBLESHOOTING</span></div>
+                <div class="grid grid-cols-2 gap-2 sm:gap-3">
+                    <div class="flex items-center gap-2 text-slate-300 text-xs sm:text-sm"><i class="fas fa-arrow-right text-amber-400 text-xs"></i> <span>use facebook lite</span></div>
+                    <div class="flex items-center gap-2 text-slate-300 text-xs sm:text-sm"><i class="fas fa-arrow-right text-amber-400 text-xs"></i> <span>tap 3 dots copy link</span></div>
+                    <div class="flex items-center gap-2 text-slate-300 text-xs sm:text-sm"><i class="fas fa-arrow-right text-amber-400 text-xs"></i> <span>fresh cookie only</span></div>
+                    <div class="flex items-center gap-2 text-slate-300 text-xs sm:text-sm"><i class="fas fa-arrow-right text-amber-400 text-xs"></i> <span>public posts only</span></div>
+                    <div class="flex items-center gap-2 text-slate-300 text-xs sm:text-sm"><i class="fas fa-arrow-right text-amber-400 text-xs"></i> <span>test with 100 first</span></div>
+                    <div class="flex items-center gap-2 text-slate-300 text-xs sm:text-sm"><i class="fas fa-arrow-right text-amber-400 text-xs"></i> <span>avoid private posts</span></div>
+                </div>
             </div>
-        </div>
-        <div class="space-y-4">
-            <div>
-                <label class="block text-slate-300 font-medium text-sm sm:text-base mb-2"><i class="fas fa-link mr-2 text-blue-400"></i>POST URL</label>
-                <input type="url" id="url" value="https://www.facebook.com/nethrion.dev/videos/1443693383468618/?app=fbl" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition text-sm sm:text-base" placeholder="https://facebook.com/...">
-            </div>
-            <div>
-                <label class="block text-slate-300 font-medium text-sm sm:text-base mb-2"><i class="fas fa-cookie mr-2 text-blue-400"></i>COOKIE</label>
-                <textarea id="cookie" rows="3" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition text-sm sm:text-base mono" placeholder="paste your facebook cookie here..."></textarea>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-4">
                 <div>
-                    <label class="block text-slate-300 font-medium text-sm sm:text-base mb-2"><i class="fas fa-chart-bar mr-2 text-blue-400"></i>AMOUNT</label>
-                    <input type="number" id="amount" value="1000" min="1" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition text-sm sm:text-base">
+                    <label class="block text-slate-300 font-medium text-sm sm:text-base mb-2"><i class="fas fa-link mr-2 text-blue-400"></i>POST URL</label>
+                    <input type="url" id="url" value="https://www.facebook.com/nethrion.dev/videos/1443693383468618/?app=fbl" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition text-sm sm:text-base" placeholder="https://facebook.com/...">
                 </div>
                 <div>
-                    <label class="block text-slate-300 font-medium text-sm sm:text-base mb-2"><i class="fas fa-clock mr-2 text-blue-400"></i>INTERVAL</label>
-                    <input type="number" id="interval" value="0" min="0" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition text-sm sm:text-base">
+                    <label class="block text-slate-300 font-medium text-sm sm:text-base mb-2"><i class="fas fa-cookie mr-2 text-blue-400"></i>COOKIE</label>
+                    <textarea id="cookie" rows="3" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition text-sm sm:text-base mono" placeholder="paste your facebook cookie here..."></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-300 font-medium text-sm sm:text-base mb-2"><i class="fas fa-chart-bar mr-2 text-blue-400"></i>AMOUNT</label>
+                        <input type="number" id="amount" value="1000" min="1" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition text-sm sm:text-base">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-medium text-sm sm:text-base mb-2"><i class="fas fa-clock mr-2 text-blue-400"></i>INTERVAL</label>
+                        <input type="number" id="interval" value="0" min="0" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition text-sm sm:text-base">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-medium text-sm sm:text-base mb-2"><i class="fas fa-microchip mr-2 text-blue-400"></i>THREADS</label>
+                    <input type="number" id="threads" value="1" min="1" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition text-sm sm:text-base">
                 </div>
             </div>
-            <div>
-                <label class="block text-slate-300 font-medium text-sm sm:text-base mb-2"><i class="fas fa-microchip mr-2 text-blue-400"></i>THREADS</label>
-                <input type="number" id="threads" value="1" min="1" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition text-sm sm:text-base">
+            <button id="startBtn" class="w-full mt-6 mb-5 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl text-white font-semibold text-base sm:text-lg hover:from-blue-600 hover:to-purple-600 transform hover:-translate-y-0.5 transition shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                <span id="btnText"><i class="fas fa-rocket mr-2"></i>START SHARING</span>
+            </button>
+            <div class="bg-black/30 border border-white/5 rounded-2xl p-4 sm:p-5 relative">
+                <div class="log-header">
+                    <div class="flex items-center gap-2 text-slate-400 text-sm sm:text-base">
+                        <i class="fas fa-circle text-green-400 text-xs"></i> 
+                        <span>LIVE LOGS</span>
+                    </div>
+                    <button id="cleanLogsBtn" class="floating-clean-btn" title="clear all logs">
+                        <i class="fas fa-eraser"></i> clean
+                    </button>
+                </div>
+                <div id="logsWrapper" class="logs-wrapper bg-black/20 rounded-xl p-3 mb-4 mono text-xs sm:text-sm"></div>
+                <div class="grid grid-cols-3 gap-2 bg-black/20 rounded-xl p-3">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="flex items-center gap-1 text-slate-400 text-xs sm:text-sm"><i class="fas fa-check-circle text-green-400"></i> <span>SUCCESS</span></div>
+                        <span id="successCount" class="text-white font-bold text-sm sm:text-base bg-white/5 px-3 py-1 rounded-full w-full text-center">0</span>
+                    </div>
+                    <div class="flex flex-col items-center text-center">
+                        <div class="flex items-center gap-1 text-slate-400 text-xs sm:text-sm"><i class="fas fa-chart-line text-blue-400"></i> <span>PROGRESS</span></div>
+                        <span id="progressCount" class="text-white font-bold text-sm sm:text-base bg-white/5 px-3 py-1 rounded-full w-full text-center">0</span>
+                    </div>
+                    <div class="flex flex-col items-center text-center">
+                        <div class="flex items-center gap-1 text-slate-400 text-xs sm:text-sm"><i class="fas fa-times-circle text-red-400"></i> <span>ERROR</span></div>
+                        <span id="errorCount" class="text-white font-bold text-sm sm:text-base bg-white/5 px-3 py-1 rounded-full w-full text-center">0</span>
+                    </div>
+                </div>
             </div>
+            <p class="text-center text-slate-600 text-xs mt-4"><i class="far fa-copyright mr-1"></i>2026 Kenneth Panio. All rights reserved.</p>
         </div>
-        <button id="startBtn" class="w-full mt-6 mb-5 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl text-white font-semibold text-base sm:text-lg hover:from-blue-600 hover:to-purple-600 transform hover:-translate-y-0.5 transition shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
-            <span id="btnText"><i class="fas fa-rocket mr-2"></i>START SHARING</span>
-        </button>
-        <div class="bg-black/30 border border-white/5 rounded-2xl p-4 sm:p-5 relative">
-            <div class="log-header">
-                <div class="flex items-center gap-2 text-slate-400 text-sm sm:text-base">
-                    <i class="fas fa-circle text-green-400 text-xs"></i> 
-                    <span>LIVE LOGS</span>
-                </div>
-                <button id="cleanLogsBtn" class="floating-clean-btn" title="clear all logs">
-                    <i class="fas fa-eraser"></i> clean
-                </button>
-            </div>
-            <div id="logsWrapper" class="logs-wrapper bg-black/20 rounded-xl p-3 mb-4 mono text-xs sm:text-sm"></div>
-            <div class="grid grid-cols-3 gap-2 bg-black/20 rounded-xl p-3">
-                <div class="flex flex-col items-center text-center">
-                    <div class="flex items-center gap-1 text-slate-400 text-xs sm:text-sm"><i class="fas fa-check-circle text-green-400"></i> <span>SUCCESS</span></div>
-                    <span id="successCount" class="text-white font-bold text-sm sm:text-base bg-white/5 px-3 py-1 rounded-full w-full text-center">0</span>
-                </div>
-                <div class="flex flex-col items-center text-center">
-                    <div class="flex items-center gap-1 text-slate-400 text-xs sm:text-sm"><i class="fas fa-chart-line text-blue-400"></i> <span>PROGRESS</span></div>
-                    <span id="progressCount" class="text-white font-bold text-sm sm:text-base bg-white/5 px-3 py-1 rounded-full w-full text-center">0</span>
-                </div>
-                <div class="flex flex-col items-center text-center">
-                    <div class="flex items-center gap-1 text-slate-400 text-xs sm:text-sm"><i class="fas fa-times-circle text-red-400"></i> <span>ERROR</span></div>
-                    <span id="errorCount" class="text-white font-bold text-sm sm:text-base bg-white/5 px-3 py-1 rounded-full w-full text-center">0</span>
-                </div>
-            </div>
-        </div>
-        <p class="text-center text-slate-600 text-xs mt-4"><i class="far fa-copyright mr-1"></i>2026 Kenneth Panio. All rights reserved.</p>
     </div>
     <script>
         $(document).ready(function() {
